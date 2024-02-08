@@ -1,3 +1,40 @@
+# a gha flow to pull and store data in repo
+
+````yaml
+name: Fetch and Store JSON
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  fetch-json:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Perform GET request
+      run: |
+        curl -o result.json https://your-api-endpoint.com/your/endpoint
+
+    - name: Create directory if not exists
+      run: mkdir -p json_data
+
+    - name: Move JSON file to subfolder
+      run: mv result.json json_data/
+
+    - name: Commit and push changes
+      run: |
+        git config --global user.name 'GitHub Actions'
+        git config --global user.email 'actions@users.noreply.github.com'
+        git add json_data/result.json
+        git commit -m "Update JSON data"
+        git push
+    ```
+
 # flaskapi
 
 Storing the secret key itself in HashiCorp Vault is a good practice for secure secret management. To achieve this, you'll need to write the JWT secret key to HashiCorp Vault during the setup or initialization phase and then retrieve it during authentication. Here's an updated version of the Flask application that stores the JWT secret key in HashiCorp Vault:
@@ -7,7 +44,7 @@ Storing the secret key itself in HashiCorp Vault is a good practice for secure s
 
 ```bash
 pip install Flask Flask-RESTful Flask-JWT-Extended hvac cryptography
-```
+````
 
 2. Set up HashiCorp Vault:
    Make sure you have HashiCorp Vault installed and running. Configure it with an appropriate authentication mechanism (e.g., token-based or AppRole) and create a secret backend where you want to store your JWT secret key.
