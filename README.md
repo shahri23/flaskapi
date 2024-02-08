@@ -1,6 +1,32 @@
 # a gha flow to pull and store data in repo
 
-````yaml
+```python
+import json
+
+# Read JSON data from file
+with open('mydata.json', 'r') as file:
+    data = json.load(file)
+
+# Modify entries occurring before the closing curly brace
+data["dashboard"]["title"] = "New Title"
+data["folderUid"] = "new-folder-uid"
+
+# Write modified data back to the same file
+with open('mydata.json', 'w') as file:
+    json.dump(data, file, indent=2)
+
+print("JSON data updated in place.")
+
+```
+
+```sh
+#!/bin/bash
+# Modify entries occurring before the closing curly brace using jq
+modified_json_object=$(jq '.dashboard.title = "New Title" | .folderUid = "new-folder-uid"' mydata.json)
+echo "$modified_json_object" > mydata.json
+```
+
+```yaml
 name: Fetch and Store JSON
 
 on:
@@ -13,27 +39,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Perform GET request
-      run: |
-        curl -o result.json https://your-api-endpoint.com/your/endpoint
+      - name: Perform GET request
+        run: |
+          curl -o result.json https://your-api-endpoint.com/your/endpoint
 
-    - name: Create directory if not exists
-      run: mkdir -p json_data
+      - name: Create directory if not exists
+        run: mkdir -p json_data
 
-    - name: Move JSON file to subfolder
-      run: mv result.json json_data/
+      - name: Move JSON file to subfolder
+        run: mv result.json json_data/
 
-    - name: Commit and push changes
-      run: |
-        git config --global user.name 'GitHub Actions'
-        git config --global user.email 'actions@users.noreply.github.com'
-        git add json_data/result.json
-        git commit -m "Update JSON data"
-        git push
-    ```
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@users.noreply.github.com'
+          git add json_data/result.json
+          git commit -m "Update JSON data"
+          git push
+```
 
 # flaskapi
 
@@ -44,7 +70,7 @@ Storing the secret key itself in HashiCorp Vault is a good practice for secure s
 
 ```bash
 pip install Flask Flask-RESTful Flask-JWT-Extended hvac cryptography
-````
+```
 
 2. Set up HashiCorp Vault:
    Make sure you have HashiCorp Vault installed and running. Configure it with an appropriate authentication mechanism (e.g., token-based or AppRole) and create a secret backend where you want to store your JWT secret key.
