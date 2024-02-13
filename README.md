@@ -1,3 +1,86 @@
+1. Workflow to Generate and Commit JSON
+   This workflow takes a variable as input, generates a JSON file based on that input, and commits the JSON file back to the repository in a specified subfolder.
+
+```yaml
+name: Generate and Commit JSON
+
+on:
+  workflow_dispatch:
+    inputs:
+      variable_name:
+        description: 'Input variable'
+        required: true
+
+jobs:
+  generate_and_commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Generate JSON
+        run: echo "{\"data\": \"$ {{ github.event.inputs.variable_name }}\"}" > data.json
+
+      - name: Commit JSON
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+          git add data.json
+          git commit -m "Generate data.json"
+          git push
+```
+
+2. Workflow Triggered by PR to Main
+   This workflow runs whenever a pull request is made to the main branch. It will use the generated JSON file from the previous workflow.
+
+```yaml
+name: Main PR Workflow
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  main_pr_job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Use JSON file
+        run: |
+          # Use the JSON file generated in the previous workflow
+          echo "Using JSON file..."
+```
+
+3. Workflow Triggered by PR to Release Tag
+   This workflow runs whenever a pull request is made with a tag that starts with release/. It also utilizes the JSON file generated earlier.
+
+```yaml
+name: Release PR Workflow
+
+on:
+  pull_request:
+    branches:
+      - release/*
+
+jobs:
+  release_pr_job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Use JSON file
+        run: |
+          # Use the JSON file generated in the previous workflow
+          echo "Using JSON file..."
+```
+
 # a gha flow to pull and store data in repo
 
 ```python
