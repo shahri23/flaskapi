@@ -2,83 +2,98 @@
    This workflow takes a variable as input, generates a JSON file based on that input, and commits the JSON file back to the repository in a specified subfolder.
 
 ```yaml
-name: Generate and Commit JSON
+name: Fetch Dashboard and Store
 
 on:
   workflow_dispatch:
     inputs:
-      variable_name:
-        description: 'Input variable'
+      dashboard_uid:
+        description: "Dashboard UID"
         required: true
 
 jobs:
-  generate_and_commit:
+  fetch_dashboard_and_store:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Generate JSON
-        run: echo "{\"data\": \"$ {{ github.event.inputs.variable_name }}\"}" > data.json
-
-      - name: Commit JSON
+      - name: Fetch Dashboard
         run: |
-          git config --global user.email "action@github.com"
-          git config --global user.name "GitHub Action"
-          git add data.json
-          git commit -m "Generate data.json"
-          git push
+          curl -o dev.json "https://your-grafana-url.com/api/dashboards/uid/${{ github.event.inputs.dashboard_uid }}"
+        env:
+          GRAFANA_API_TOKEN: ${{ secrets.GRAFANA_API_TOKEN }}
+
+      - name: Create Branch and Push
+        run: |
+          git checkout -b dev
+          mkdir -p dev
+          mv dev.json dev/
+          git add .
+          git commit -m "Add dev.json dashboard"
+          git push origin dev
 ```
 
 2. Workflow Triggered by PR to Main
    This workflow runs whenever a pull request is made to the main branch. It will use the generated JSON file from the previous workflow.
 
 ```yaml
-name: Main PR Workflow
+name: Update Stage Dashboard
 
 on:
-  pull_request:
+  pull_request_review:
+    types: [submitted]
     branches:
       - main
+      - "stage/*"
 
 jobs:
-  main_pr_job:
+  update_stage_dashboard:
+    if: github.event.review.state == 'approved'
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Use JSON file
+      - name: Fetch Dev Dashboard
         run: |
-          # Use the JSON file generated in the previous workflow
-          echo "Using JSON file..."
+          git fetch origin dev
+          git checkout FETCH_HEAD -- dev/dev.json
+
+      - name: Update Stage Dashboard
+        run: |
+          # Your script to update the stage dashboard using dev.json and Grafana API
 ```
 
 3. Workflow Triggered by PR to Release Tag
    This workflow runs whenever a pull request is made with a tag that starts with release/. It also utilizes the JSON file generated earlier.
 
 ```yaml
-name: Release PR Workflow
+name: Update Release Dashboard
 
 on:
-  pull_request:
+  pull_request_review:
+    types: [submitted]
     branches:
-      - release/*
+      - main
+      - "release/*"
 
 jobs:
-  release_pr_job:
+  update_release_dashboard:
+    if: github.event.review.state == 'approved'
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Use JSON file
+      - name: Fetch Dev Dashboard
         run: |
-          # Use the JSON file generated in the previous workflow
-          echo "Using JSON file..."
+          git fetch origin dev
+          git checkout FETCH_HEAD -- dev/dev.json
+
+      - name: Update Release Dashboard
+        run: |
+          # Your script to update the release dashboard using dev.json and Grafana API
 ```
 
 # a gha flow to pull and store data in repo
