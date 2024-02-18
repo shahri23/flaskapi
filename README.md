@@ -10,6 +10,10 @@ on:
       dashboard_uid:
         description: "Dashboard UID"
         required: true
+  workflow_run:
+    workflows: ["Create Stage Dashboard"]
+    types:
+      - completed
 
 jobs:
   fetch_dashboard_and_store:
@@ -32,131 +36,83 @@ jobs:
           git add .
           git commit -m "Add dev.json dashboard"
           git push origin dev
+
+      - name: Create Pull Request to Main
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: dev
+          title: "Merge dev branch into main"
+          body: "This pull request is to merge changes from dev branch into main."
+          labels: "automated-pr"
+          reviewers: "username1, username2" # Add reviewers as necessary
+
+      - name: Delete Dev Branch After PR Approval
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+        run: |
+          git push origin --delete dev
 ```
 
 2. Workflow Triggered by PR to Main
    This workflow runs whenever a pull request is made to the main branch. It will use the generated JSON file from the previous workflow.
 
 ```yaml
-name: Update Stage Dashboard
+name: Create Stage Dashboard
 
 on:
-  pull_request_review:
-    types: [submitted]
-    branches:
-      - main
-      - "stage/*"
+  workflow_run:
+    workflows: ["Fetch Dashboard and Store"]
+    types:
+      - completed
 
 jobs:
-  update_stage_dashboard:
-    if: github.event.review.state == 'approved'
+  create_stage_dashboard:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Fetch Dev Dashboard
-        run: |
-          git fetch origin dev
-          git checkout FETCH_HEAD -- dev/dev.json
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.0.0
 
-      - name: Update Stage Dashboard
-        run: |
-          # Your script to update the stage dashboard using dev.json and Grafana API
+      - name: Initialize Terraform
+        run: terraform init
+
+      - name: Apply Terraform Configuration
+        run: terraform apply -auto-approve
 ```
 
 3. Workflow Triggered by PR to Release Tag
    This workflow runs whenever a pull request is made with a tag that starts with release/. It also utilizes the JSON file generated earlier.
 
 ```yaml
-name: Update Release Dashboard
-
-on:
-  pull_request_review:
-    types: [submitted]
-    branches:
-      - main
-      - "release/*"
-
-jobs:
-  update_release_dashboard:
-    if: github.event.review.state == 'approved'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Fetch Dev Dashboard
-        run: |
-          git fetch origin dev
-          git checkout FETCH_HEAD -- dev/dev.json
-
-      - name: Update Release Dashboard
-        run: |
-          # Your script to update the release dashboard using dev.json and Grafana API
-```
-
-# a gha flow to pull and store data in repo
-
-```python
-import json
-
-# Read JSON data from file
-with open('mydata.json', 'r') as file:
-    data = json.load(file)
-
-# Modify entries occurring before the closing curly brace
-data["dashboard"]["title"] = "New Title"
-data["folderUid"] = "new-folder-uid"
-
-# Write modified data back to the same file
-with open('mydata.json', 'w') as file:
-    json.dump(data, file, indent=2)
-
-print("JSON data updated in place.")
-
-```
-
-```sh
-#!/bin/bash
-# Modify entries occurring before the closing curly brace using jq
-modified_json_object=$(jq '.dashboard.title = "New Title" | .folderUid = "new-folder-uid"' mydata.json)
-echo "$modified_json_object" > mydata.json
-```
-
-```yaml
-name: Fetch and Store JSON
+name: Create Release Dashboard
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "release/*"
 
 jobs:
-  fetch-json:
+  create_release_dashboard:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Perform GET request
-        run: |
-          curl -o result.json https://your-api-endpoint.com/your/endpoint
+      # Add steps to create the release dashboard
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.0.0
 
-      - name: Create directory if not exists
-        run: mkdir -p json_data
+      - name: Initialize Terraform
+        run: terraform init
 
-      - name: Move JSON file to subfolder
-        run: mv result.json json_data/
-
-      - name: Commit and push changes
-        run: |
-          git config --global user.name 'GitHub Actions'
-          git config --global user.email 'actions@users.noreply.github.com'
-          git add json_data/result.json
-          git commit -m "Update JSON data"
-          git push
+      - name: Apply Terraform Configuration
+        run: terraform apply -auto-approve
 ```
 
 # flaskapi
