@@ -1,3 +1,80 @@
+## Release Tag
+
+If you're not using a release branch and only using release tags directly from the main branch, the process simplifies a bit. Here's how you can modify the process:
+
+Ensure your local main branch is up-to-date:
+
+```bash
+git checkout main
+git pull origin main
+```
+
+Prepare your code for release:
+
+Make any final adjustments, updates, or bug fixes needed for the release.
+Update any version-related files (e.g., package.json, README.md) with the new version number if necessary.
+Commit your changes:
+
+```bash
+git add .
+git commit -m "Prepare for release <version>"
+```
+
+Push the changes to the remote repository:
+
+```bash
+git push origin main
+```
+
+Tag the commit with the release version:
+
+```bash
+git tag -a v<version> -m "Version <version>"
+git push origin v<version>
+```
+
+Replace <version> with the version number you're releasing. For example:
+
+```bash
+git tag -a v1.0.0 -m "Version 1.0.0"
+git push origin v1.0.0
+```
+
+Verify the tag and release on your repository hosting service (e.g., GitHub, GitLab):
+
+Check your repository's tags section to ensure the tag has been created successfully.
+Optionally, publish release notes or documentation:
+
+You might want to create release notes or update documentation to reflect the changes introduced in this release.
+This streamlined process eliminates the need for managing release branches, making it simpler and more direct.
+
+```yaml
+name: Create Grafana Dashboard
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*" # Trigger on push to tags starting with 'v' on the main branch
+
+jobs:
+  create_dashboard:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install dependencies (if needed)
+        run: npm install # Adjust as per your project's requirements
+
+      - name: Execute script to create Grafana dashboard
+        env:
+          GRAFANA_API_KEY: ${{ secrets.GRAFANA_API_KEY }} # Assuming you have a secret named GRAFANA_API_KEY
+        run: python create_dashboard.py # Adjust the script name and language as needed
+```
+
 1. Workflow to Generate and Commit JSON
    This workflow takes a variable as input, generates a JSON file based on that input, and commits the JSON file back to the repository in a specified subfolder.
 
@@ -51,6 +128,48 @@ jobs:
         if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
         run: |
           git push origin --delete dev
+```
+
+flow down
+
+```yaml
+name: Create Grafana Dashboard
+on:
+  workflow_dispatch:
+    inputs:
+      dashboard_uid:
+        description: "Dashboard UID"
+        required: true
+      environment:
+        description: "Choose one of the following environments: java, node, namespace"
+        required: true
+        default: "java" # Default value, but user must choose one of the provided options
+jobs:
+  create_dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Install dependencies (if needed)
+        run: npm install # Adjust as per your project's requirements
+      - name: Make curl GET request to Grafana API and store response
+        id: grafana_api_request
+        run: |
+          ENVIRONMENT=${{ github.event.inputs.environment }}
+          DASHBOARD_UID=${{ github.event.inputs.dashboard_uid }}
+          if [ "$ENVIRONMENT" == "java" ]; then
+            curl -X GET -H "Authorization: Bearer $GRAFANA_API_KEY" https://your-grafana-instance/api/dashboards/uid/$DASHBOARD_UID > java.json
+          elif [ "$ENVIRONMENT" == "node" ]; then
+            curl -X GET -H "Authorization: Bearer $GRAFANA_API_KEY" https://your-grafana-instance/api/dashboards/uid/$DASHBOARD_UID > node.json
+          elif [ "$ENVIRONMENT" == "namespace" ]; then
+            curl -X GET -H "Authorization: Bearer $GRAFANA_API_KEY" https://your-grafana-instance/api/dashboards/uid/$DASHBOARD_UID > namespace.json
+          else
+            echo "Invalid environment selected."
+            exit 1
+          fi
+
+      - name: Save API response to JSON file
+        run: echo "${{ steps.grafana_api_request.outputs.stdout }}" > ${{ github.event.inputs.environment }}.json
 ```
 
 2. Workflow Triggered by PR to Main
