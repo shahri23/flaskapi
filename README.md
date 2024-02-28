@@ -2,6 +2,34 @@
 
 If you're not using a release branch and only using release tags directly from the main branch, the process simplifies a bit. Here's how you can modify the process:
 
+```yaml
+name: Merge to Main Action
+on:
+  pull_request:
+    types: [closed]
+jobs:
+  check_merge:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' && contains(github.event.pull_request.head.repo.full_name, github.repository)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: List changed files
+        id: list_files
+        run: echo "::set-output name=files::$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})"
+
+      - name: Echo files if merged into cdp-release folder
+        run: |
+          files="${{ steps.list_files.outputs.files }}"
+          for file in $files; do
+            if [[ $file == "cdp-release/"* ]]; then
+              echo "File '$file' was merged into the cdp-release folder."
+            fi
+          done
+```
+
 Ensure your local main branch is up-to-date:
 
 ```bash
