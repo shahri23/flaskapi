@@ -4,30 +4,33 @@ If you're not using a release branch and only using release tags directly from t
 
 ```yaml
 name: Merge to Main Action
-on:
-  pull_request:
-    types: [closed]
-jobs:
-  check_merge:
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' && contains(github.event.pull_request.head.repo.full_name, github.repository)
-    runs-on: ubuntu-latest
+name: Main Branch Merge
 
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  main_merge:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: List changed files
-        id: list_files
-        run: echo "::set-output name=files::$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})"
-
-      - name: Echo files if merged into cdp-release folder
+      - name: Get last merge commit
+        id: last_merge
         run: |
-          files="${{ steps.list_files.outputs.files }}"
-          for file in $files; do
-            if [[ $file == "cdp-release/"* ]]; then
-              echo "File '$file' was merged into the cdp-release folder."
-            fi
-          done
+          git fetch --depth=1 origin +refs/heads/main:refs/remotes/origin/main
+          LAST_MERGE=$(git log --merges --format=%H -n 1 refs/remotes/origin/main)
+          echo "::set-output name=last_merge_commit::$LAST_MERGE"
+
+      - name: List changed files
+        run: |
+          LAST_MERGE_COMMIT=${{ steps.last_merge.outputs.last_merge_commit }}
+          CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r $LAST_MERGE_COMMIT)
+          echo "Files changed or added in the last merge:"
+          echo "$CHANGED_FILES"
 ```
 
 Ensure your local main branch is up-to-date:
