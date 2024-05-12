@@ -1,3 +1,52 @@
+java -jar target/app.jar --library-dependencies target/lib/
+
+spearate jar with target
+
+```xml
+<project>
+    <!-- Other configurations -->
+
+    <build>
+        <plugins>
+            <!-- Copy dependencies to the lib folder -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.1.2</version>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Build a standalone JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass><!-- Your main class here --></mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
 To configure mutual TLS (mTLS) with backend services in Spring Cloud Gateway using only properties.yaml (application.yaml), you can leverage Spring Boot's auto-configuration capabilities along with custom properties. Here's how you can achieve this:
 
 Configure SSL/TLS for Spring Cloud Gateway:
