@@ -1,3 +1,9 @@
+k=1
+url*1=https://www.cnn.com/
+user=myuser
+password=mypass
+eval "curl -u $user:$password \"\${url*$k}\""
+
 java -jar target/app.jar --library-dependencies target/lib/
 
 spearate jar with target
