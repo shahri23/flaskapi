@@ -1,3 +1,77 @@
+### Github scraping script
+
+```python
+
+import requests
+
+# Replace 'your_github_token' with your actual GitHub personal access token
+GITHUB_TOKEN = 'your_github_token'
+
+# List of GitHub repositories to check
+repos = [
+    'owner/repo1',
+    'owner/repo2',
+    'owner/repo3',
+    # Add more repositories as needed
+]
+
+# Docker image to search for in Dockerfiles
+docker_image = 'acr.ga.com/nginx-alpine:latest'
+
+# GitHub API URL
+GITHUB_API_URL = 'https://api.github.com'
+
+# Headers for authentication
+headers = {
+    'Authorization': f'token {GITHUB_TOKEN}',
+    'Accept': 'application/vnd.github.v3+json'
+}
+
+def check_dockerfile_for_image(repo):
+    # Construct the URL to get the contents of the repository
+    contents_url = f'{GITHUB_API_URL}/repos/{repo}/contents/'
+
+    response = requests.get(contents_url, headers=headers)
+    if response.status_code != 200:
+        print(f'Failed to fetch contents of {repo}')
+        return False
+
+    # Get the list of files and directories in the root of the repository
+    contents = response.json()
+    for item in contents:
+        if item['type'] == 'file' and item['name'].lower() == 'dockerfile':
+            # Get the contents of the Dockerfile
+            dockerfile_url = item['download_url']
+            dockerfile_response = requests.get(dockerfile_url)
+            if dockerfile_response.status_code == 200:
+                dockerfile_contents = dockerfile_response.text
+                # Check if the specified Docker image is in the Dockerfile
+                if docker_image in dockerfile_contents:
+                    return True
+    return False
+
+def main():
+    repos_with_docker_image = []
+
+    for repo in repos:
+        if check_dockerfile_for_image(repo):
+            repos_with_docker_image.append(repo)
+
+    if repos_with_docker_image:
+        print('Repositories with the specified Docker image in their Dockerfile:')
+        for repo in repos_with_docker_image:
+            print(repo)
+    else:
+        print('No repositories found with the specified Docker image in their Dockerfile.')
+
+if __name__ == '__main__':
+    main()
+
+
+```
+
+### End
+
 k=1
 url*1=https://www.cnn.com/
 user=myuser
