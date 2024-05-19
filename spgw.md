@@ -1,3 +1,72 @@
+#### replace yaml secret
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: example-pod
+spec:
+  containers:
+    - name: example-container
+      image: busybox
+      command: ["/bin/sh"]
+      args: ["-c", "while true; do sleep 3600; done"]
+      volumeMounts:
+        - name: config-volume
+          mountPath: /etc/config
+        - name: secret-volume
+          mountPath: /etc/secret
+  volumes:
+    - name: config-volume
+      configMap:
+        name: example-configmap
+    - name: secret-volume
+      secret:
+        secretName: example-secret
+```
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-configmap
+data:
+  config.yaml: |
+    apiVersion: v1
+    kind: Config
+    metadata:
+      name: example
+    data:
+      username: "defaultUser"
+      password: "__SECRET_PASSWORD__"
+```
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: example-secret
+type: Opaque
+data:
+  password: c2VjcmV0UGFzc3dvcmQ= # base64 encoded secret password
+```
+
+and then
+
+```bash
+#!/bin/sh
+
+# Read the secret value
+SECRET_PASSWORD=$(cat /etc/secret/password)
+
+# Replace the placeholder in the config file with the actual secret
+sed -i "s/__SECRET_PASSWORD__/${SECRET_PASSWORD}/" /etc/config/config.yaml
+
+# Start your application here, for example:
+exec your_application --config /etc/config/config.yaml
+
+```
+
 ### Github scraping script
 
 ```python
